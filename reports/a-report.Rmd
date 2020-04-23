@@ -9,6 +9,10 @@ theme: sandstone
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(here)
+library(BBmisc)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
 source(here::here("code/lib.R"))
 theme_set(theme_bw())
 
@@ -73,8 +77,128 @@ por_time = estimativas_raw %>%
 ```
 
 
+```{r}
+head(estimativas)
+
+```
+```{r}
+#id - nº desenvolvedores do projeto -  dif entre estimativa e tempo real - qtd estimativas
+head(por_time)
+
+```
+
+
 ## Qual a relação entre as estimativas e horas reais tomadas na empresa como um todo e em diferentes categorias de tarefa?
 
+Detalhando um pouco mais os dados para entender a distribuição para as variáveis HoursEstimate e HoursActual, temos:
+
+```{r}
+
+estimativas %>% ggplot( aes(x=HoursActual , y=HoursEstimate, color = Category)) +
+    geom_point() +
+    scale_y_continuous(name = "Horas Estimadas",
+                           breaks = seq(0, max(estimativas$HoursEstimate), 200))+
+    scale_x_continuous(name = "Horas Atuais",
+                           breaks = seq(0, max(estimativas$HoursActual), 400))
+
+```
+
+Como podemos ver, a maior parte dos registro para horas estimadas se concentram entre 0 e 200, enquanto que para horas atuais se concentram entre 0 e 400, sendo assim, vamos eliminiar os dados fora destes intervalos.
+
+```{r}
+
+est.filter = estimativas %>% filter(HoursEstimate <=200 & HoursActual <=400) 
+
+est.filter  %>% ggplot( aes(x=HoursActual , y=HoursEstimate, color = Category)) +
+    geom_point()
+
+```
+
+Mesmo com a filtragem inicial, como podemos ver nos dados apresentados abaixo, existe uma grande presença de outliers nas 3 categorias de tarefa existentes, tanto para horas estimadas quanto para horas reais. Sendo assim, vamos desconsiderar o coeficiente de Pearson para a análise de correlação.
+
+```{r}
+
+
+est.filter %>% select(HoursEstimate)%>% summary()
+
+est.filter %>% ggplot( aes(x=Category , y=HoursEstimate)) +
+    geom_boxplot(width = .3) #+
+    #scale_y_continuous(name = "Horas Estimadas",
+                           #breaks = seq(0, 100, 10),
+                           #limits=c(0, 100))
+
+
+est.filter %>% select(HoursActual)%>% summary()
+
+est.filter %>% ggplot( aes(x=Category , y=HoursActual)) +
+    geom_boxplot(width = .3) #+ 
+    #scale_y_continuous(name = "Horas Reais",
+                          # breaks = seq(0, 100, 10),
+                          # limits=c(0, 100))
+
+```
+
+
+Analisando a relação como um todo, sem restrição de categorias, temos:
+
+```{r}
+
+corr = est.filter %>% summarise(spearman = cor(HoursEstimate, HoursActual,  method = "spearman"), 
+                                kendall = cor(HoursEstimate, HoursActual, method = "kendall"))
+
+corr
+
+```
+
+Com isso, tanto o coeficiente de Spearman quanto o de Kendall indicam que há uma forte correlação positiva entre as variáveis, isto é, a medida que se aumentam as horas estimadas, também aumentam as horas reais de execução da tarefa. A partir disto é possível concluir que, no geral, as estimativas do tempo de conclusão das atividade estão de acordo com o tempo que foi necessário para concluí-las.
+
+Separando as atividades de acordo com as 3 categorias existentes temos:
+
+1.Development: 
+
+```{r}
+est.dev = estimativas %>% filter(Category == "Development") %>% filter(HoursEstimate <=200 & HoursActual <=400)
+
+est.dev  %>% ggplot( aes(x=HoursActual , y=HoursEstimate)) +
+    geom_point()
+
+corr.dev = est.dev %>% summarise(spearman = cor(HoursEstimate, HoursActual,  method = "spearman"), kendall = cor(HoursEstimate, HoursActual, method = "kendall"))
+
+corr.dev
+
+```
+
+2. Management:
+
+```{r}
+est.man = estimativas %>% filter(Category == "Management") %>% filter(HoursEstimate <=200 & HoursActual <=400)
+est.man  %>% ggplot( aes(x=HoursActual , y=HoursEstimate)) +
+    geom_point()
+
+corr.man = est.man %>% summarise(spearman = cor(HoursEstimate, HoursActual,  method = "spearman"), kendall = cor(HoursEstimate, HoursActual, method = "kendall"))
+
+corr.man
+
+```
+
+
+3. Operational:
+```{r}
+est.op = estimativas %>% filter(Category == "Operational") %>% filter(HoursEstimate <=200 & HoursActual <=400)
+est.op  %>% ggplot( aes(x=HoursActual , y=HoursEstimate)) +
+    geom_point()
+
+corr.op = est.op %>% summarise(spearman = cor(HoursEstimate, HoursActual,  method = "spearman"), kendall = cor(HoursEstimate, HoursActual, method = "kendall"))
+
+corr.op
+
+```
+
+Para as 3 categorias podemos perceber que há uma relação positiva forte entre as variáveis horas estimadas e horas reais, seguindo o comportamento geral. 
+
+Sendo assim, podemos concluir que, independente da categoria, o prazo de execução das tarefas estão recebendo estimativas que seguem a realidade.
 
 ## Equipes com mais desenvolvedores produzem estimativas com mais ou menos erro que equipes menores? 
+Base - por_time
 
+ordenar devs - maiores equipes q3 e maximo - menores equipes q1 e minimo - media e distribuição de erros para cada conjunto
