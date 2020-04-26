@@ -196,9 +196,49 @@ corr.op
 
 Para as 3 categorias podemos perceber que há uma relação positiva forte entre as variáveis horas estimadas e horas reais, seguindo o comportamento geral. 
 
-Sendo assim, podemos concluir que, independente da categoria, o prazo de execução das tarefas estão recebendo estimativas que seguem a realidade.
+Sendo assim, podemos concluir que na maioria dos casos, independente da categoria, o prazo de execução das tarefas estão recebendo estimativas que seguem a realidade.
 
 ## Equipes com mais desenvolvedores produzem estimativas com mais ou menos erro que equipes menores? 
-Base - por_time
 
-ordenar devs - maiores equipes q3 e maximo - menores equipes q1 e minimo - media e distribuição de erros para cada conjunto
+Analisando a distribuição das variáveis, temos: 
+
+```{r}
+
+por_time %>% ggplot( aes(x=devs , y=erro_medio_abs)) +
+    geom_point() +
+    scale_y_continuous(name = "Erro Médio",
+                           breaks = seq(0, max(por_time$erro_medio_abs), 10))+
+    scale_x_continuous(name = "Desenvolvedores",
+                           breaks = seq(0, max(por_time$devs),2))
+
+por_time %>% ggplot( aes(x="" , y=erro_medio_abs)) +
+    geom_boxplot(width = .3) #+
+
+```
+
+Nos gráficos acima, podemos perceber a presença de 3 outliers que podem atrapalhar a análise dos dados, sendo assim, vamos excluí-los.
+
+```{r}
+por_time.filter = por_time %>% filter(erro_medio_abs <= 25)
+
+por_time.filter %>% ggplot( aes(x=devs , y=erro_medio_abs)) +
+    geom_point() +
+    scale_y_continuous(name = "Erro Médio",
+                           breaks = seq(0, max(por_time$erro_medio_abs), 10))+
+    scale_x_continuous(name = "Desenvolvedores",
+                           breaks = seq(0, max(por_time$devs),2))
+
+
+```
+
+Analisando a correlação entre essas duas variáveis, temos:
+
+```{r}
+por_time.filter %>%summarise(pearson = cor(devs, erro_medio_abs,  method = "pearson"), 
+                            spearman = cor(devs, erro_medio_abs,  method = "spearman"), 
+                            kendall = cor(devs, erro_medio_abs, method = "kendall"))
+
+
+```
+
+Sendo assim, com base nos coeficientes de correlação calculados, temos que não há uma relação entre tamanho da equipe e erros de estimativa, não sendo possível afirmar que equipes com mais desenvolvedores comentem mais ou menos erros que equipe menores. 
